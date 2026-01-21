@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ Chatbot</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 { 
+            text-align: center; 
+            color: #2c3e50;
+            margin-bottom: 2rem;
+        }
+
+        #chatbox { 
+            display: flex; 
+            gap: 0.5rem; 
+            margin-bottom: 2rem;
+        }
+
+        #question { 
+            flex-grow: 1; 
+            padding: 0.8rem; 
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #question:focus {
+            border-color: var(--primary-color);
+        }
+
+        #send-btn {
+            padding: 0.8rem 1.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        #send-btn:hover {
+            background-color: #2980b9;
+        }
+
+        #response-container { 
+            border-top: 1px solid #eee;
+            padding-top: 1rem;
+        }
+
+        #answer { 
+            white-space: pre-wrap; 
+            line-height: 1.6;
+            background: #f9f9f9;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        h2 { font-size: 1.2rem; color: #7f8c8d; }
+
+        #sources-list { list-style: none; padding: 0; }
+
+        #sources-list li { 
+            background: #fff;
+            border-left: 4px solid var(--primary-color);
+            padding: 1rem; 
+            margin-top: 1rem; 
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-size: 0.9rem;
+        }
+
+        .spinner { 
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid var(--primary-color); 
+            border-radius: 50%; 
+            width: 30px; 
+            height: 30px; 
+            animation: spin 1s linear infinite; 
+            display: none; 
+            margin: 1rem auto;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>FAQ Chatbot</h1>
+        <div id="chatbox">
+            <input type="text" id="question" placeholder="Ask a question about the project...">
+            <button id="send-btn">Send</button>
+        </div>
+        
+        <div id="response-container">
+            <div id="spinner" class="spinner"></div>
+            <h2>Answer:</h2>
+            <p id="answer"></p>
+            <h2>Sources:</h2>
+            <ul id="sources-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        const questionInput = document.getElementById('question');
+        const sendBtn = document.getElementById('send-btn');
+        const answerEl = document.getElementById('answer');
+        const sourcesListEl = document.getElementById('sources-list');
+        const spinner = document.getElementById('spinner');
+
+        sendBtn.addEventListener('click', askQuestion);
+        questionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                askQuestion();
+            }
+        });
+
+        async function askQuestion() {
+            const question = questionInput.value;
+            if (!question) return;
+
+            answerEl.textContent = '';
+            sourcesListEl.innerHTML = '';
+            spinner.style.display = 'block';
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    answerEl.textContent = `Error: ${errorData.detail || response.statusText}`;
+                    return;
+                }
+
+                const data = await response.json();
+                answerEl.textContent = data.answer;
+                
+                data.sources.forEach(source => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <strong>File:</strong> ${source.file}<br>
+                        <strong>Heading:</strong> ${source.heading}<br>
+                        <strong>Lines:</strong> ${source.start_line} - ${source.end_line}
+                    `;
+                    sourcesListEl.appendChild(li);
+                });
+
+            } catch (error) {
+                answerEl.textContent = 'An unexpected error occurred. See console for details.';
+                console.error('Error:', error);
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

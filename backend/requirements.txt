@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+httpx
+chromadb>=0.4.0
+jinja2

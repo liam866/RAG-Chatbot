@@ -1,0 +1,13 @@
+# Environment variables
+.env
+
+# ChromaDB persistent data
+/chroma_data/
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# IDE configuration
+.vscode/
+.idea/
