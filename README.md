@@ -1,34 +1,35 @@
 # Local RAG FAQ Chatbot
 
-A self-contained FAQ chatbot that runs locally via Docker Compose. It uses a local Ollama instance for retrieval-augmented generation (RAG) over a knowledge base of Markdown files.
+A self-contained FAQ chatbot designed to run locally via Docker Compose. It connects to a local Ollama instance to perform retrieval-augmented generation (RAG) over a Markdown-based knowledge base.
 
 ## Key Features
 
-- **100% Local & Private**: All components run in your environment. No data ever leaves your network.
-- **Retrieval-Augmented Generation (RAG)**: Provides answers grounded in your documents, minimizing hallucinations and providing verifiable source citations.
-- **Ollama Powered**: Integrates with local Ollama models for both embedding (`all-minilm:22m`) and generation (`qwen2.5:7b-instruct`).
-- **Persistent Vector Store**: Employs ChromaDB for efficient, persistent storage of the knowledge base, with data saved to a local `./chroma_data` directory.
-- **Automatic Synchronization**: Intelligently syncs the database with the `/kb` directory on startup, only processing changed files.
-- **Relevance Filtering**: Uses cosine similarity with a distance threshold to ensure only relevant documents are used for answers.
+- **Fully Local & Private**: All components run within your environment. No data is transmitted outside your network.
+- **Retrieval-Augmented Generation (RAG)**: Answers are grounded in your documentation, reducing hallucinations and providing clear, verifiable source citations.
+- **Ollama Powered**: Integrates with local Ollama models for both embedding (all-minilm:22m) and generation (qwen2.5:7b-instruct).
+- **Persistent Vector Store**: Uses ChromaDB for efficient, persistent storage of embeddings, with data stored locally in the ./chroma_data directory.
+- **Automatic Synchronization**: Automatically synchronizes the vector store with the /kb directory on startup, processing only new or modified files.
+- **Relevance Filtering**: Applies cosine similarity with a distance threshold to ensure only relevant documents are used when generating responses.
 
 ## How It Works
 
 The application follows a standard RAG pipeline:
 
-1.  **Sync KB**: On startup, the backend parses `.md` files from the `/kb` directory, hashes each chunk, and syncs additions, updates, or deletions with the ChromaDB vector store.
-2.  **Embed**: New or updated chunks are converted into vector embeddings by the local Ollama embedding model.
-3.  **Retrieve**: A user's question is embedded and used to find the most similar document chunks in ChromaDB via a cosine similarity search. Results that don't meet the relevance threshold are discarded.
-4.  **Generate**: The retrieved text and the original question are passed in a prompt to the local LLM, which generates an answer based only on the provided context.
-5.  **Cite**: The final answer is returned with metadata (file, heading, lines) from the retrieved chunks.
+1. **Sync KB**: On startup, the backend parses .md files from the /kb directory, chunks the content, hashes each chunk, and synchronizes additions, updates, or deletions with the ChromaDB vector store.
+2. **Embed**: New or updated chunks are converted into vector embeddings using the local Ollama embedding model.
+3. **Retrieve**: A user query is embedded and used to retrieve the most similar document chunks from ChromaDB via cosine similarity search. Chunks that do not meet the relevance threshold are discarded.
+4. **Generate**: The retrieved context and original question are passed to the local LLM, which generates a response strictly constrained to the provided content.
+5. **Cite**: The final response includes metadata (file name, section heading, and line range) corresponding to the source material.
 
 ## Prerequisites
 
-- **Docker and Docker Compose**: You must have Docker and Docker Compose installed on your machine.
-- **Ollama**: You need a running Ollama instance that is accessible from your Docker containers. For this, Ollama should be configured to listen on a network address (e.g., `OLLAMA_HOST=0.0.0.0`).
-- **Ollama Models**: You must have the required models pulled. You can get them by running:
-  ```sh
-  ollama pull qwen2.5:7b-instruct
-  ollama pull all-minilm:22m
+- **Docker and Docker Compose**: Docker and Docker Compose must be installed on your system.
+- **Ollama**: A running Ollama instance accessible from Docker containers. Ollama should be configured to listen on a network address (e.g. OLLAMA_HOST=0.0.0.0).
+- **Ollama Models**: The required models must be available locally. Pull them using:
+
+```sh
+ollama pull qwen2.5:7b-instruct
+ollama pull all-minilm:22m
   ```
 
 ## Quickstart
