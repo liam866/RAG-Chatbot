@@ -6,11 +6,11 @@ A self-contained FAQ chatbot designed to run entirely locally via Docker Compose
 
 ## Problem & Solution
 
-Large Language Models (LLMs) often hallucinate - providing confident but incorrect answers without verifiable sources. This project tackles that by:
+Large Language Models (LLMs) often hallucinate—providing confident but incorrect answers without verifiable sources. This project addresses that by:
 
-- **Grounding answers in an auditable, local knowledge base** (Markdown files).  
-- **Refusing to answer when evidence is insufficient**, preventing misinformation.  
-- **Including precise citations** for every response, ensuring traceability.
+- Grounding answers in an auditable, local knowledge base (Markdown files).  
+- Refusing to answer when evidence is insufficient, preventing misinformation.  
+- Including precise citations for every response, ensuring traceability.
 
 ---
 
@@ -18,20 +18,25 @@ Large Language Models (LLMs) often hallucinate - providing confident but incorre
 
 The chatbot implements a standard RAG pipeline:
 
-1. **Ingestion & Sync**  
-   On startup, Markdown files in `/kb` are parsed, chunked by headings, hashed, and synchronized with a persistent vector store (ChromaDB). Only new or changed chunks are updated.
+### Ingestion & Sync
 
-2. **Embedding**  
-   Chunks are embedded using a local Ollama embedding model (`all-minilm:22m`) for efficient semantic search.
+- On startup, Markdown files in `/kb` are parsed, chunked by headings, hashed, and synchronized with a persistent vector store (ChromaDB). Only new or changed chunks are updated.
 
-3. **Retrieval**  
-   User queries are embedded and matched against stored chunks via cosine similarity. Only chunks exceeding a relevance threshold (0.65) are used; otherwise, the system declines to answer.
+### Embedding
 
-4. **Generation**  
-   The local Ollama LLM (`qwen2.5:7b-instruct`) generates answers strictly based on retrieved context, avoiding hallucination.
+- Chunks are embedded using a local Ollama embedding model (`all-minilm:22m`) for efficient semantic search.
 
-5. **Citation**  
-   Responses include source metadata (file name, heading, and line range) for transparency.
+### Retrieval
+
+- User queries are embedded and matched against stored chunks via cosine similarity.  
+- A debug endpoint exposes the exact retrieved chunks and their similarity scores for inspectability.  
+- A relevance threshold (0.65) is enforced; if no chunk meets it, the system declines to answer.
+
+### Generation
+
+- Retrieved context is fed into a local Ollama LLM (`qwen2.5:7b-instruct`).  
+- The model generates answers strictly based on the provided context, avoiding hallucination.  
+- Responses include explicit citations (source file, heading, and line range) for transparency.
 
 ---
 
@@ -42,6 +47,7 @@ The chatbot implements a standard RAG pipeline:
 - **Persistent Vector Store:** Uses ChromaDB to store embeddings locally (`./chroma_data`).  
 - **Automatic KB Sync:** Updates only new or modified files on startup.  
 - **Relevance Filtering:** Uses cosine similarity to ensure answer quality.  
+- **Debugging & Inspectability:** Debug endpoints provide insight into retrieval results and similarity scoring.  
 - **Powered by Ollama:** Local LLM and embedding models ensure fast, reliable inference.
 
 ---
