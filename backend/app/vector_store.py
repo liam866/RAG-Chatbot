@@ -2,7 +2,7 @@ import chromadb
 import httpx
 import hashlib
 import logging
-from typing import List
+from typing import List, Tuple
 from .schemas import DocumentChunk
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ class VectorStore:
         db_entries = self.collection.get(include=["metadatas"])
         db_chunks_map = {
             entry_id: metadata for entry_id, metadata 
-            in zip(db_entries['ids'], db_entries['metadatas'])
+            in zip(db_entries["ids"], db_entries["metadatas"])
         }
         
         file_chunk_ids = set()
@@ -106,27 +106,38 @@ class VectorStore:
             )
         logger.info("Document synchronization complete.")
 
-    def query(self, query_text: str, n_results: int, threshold: float = 0.6) -> List[DocumentChunk]:
+    def retrieve_with_distances(self, query_text: str, n_results: int) -> List[Tuple[DocumentChunk, float]]:
         results = self.collection.query(
             query_texts=[query_text],
             n_results=n_results,
             include=["metadatas", "documents", "distances"]
         )
         
-        retrieved_chunks = []
+        retrieved_data = []
         if results and results["documents"]:
             for i, doc_text in enumerate(results["documents"][0]):
                 distance = results["distances"][0][i]
-                if distance <= threshold:
-                    meta = results["metadatas"][0][i]
-                    retrieved_chunks.append(DocumentChunk(
+                meta = results["metadatas"][0][i]
+                retrieved_data.append((
+                    DocumentChunk(
                         text=doc_text,
                         file=meta.get("file"),
                         heading=meta.get("heading"),
                         start_line=meta.get("start_line"),
                         end_line=meta.get("end_line")
-                    ))
-                else:
-                    logger.info(f"Filtered out chunk with distance {distance} (above threshold {threshold}).")
+                    ),
+                    distance
+                ))
+        return retrieved_data
 
-        return retrieved_chunks
+    def query(self, query_text: str, n_results: int, threshold: float = 0.7) -> List[DocumentChunk]:
+        # Use the retrieve_with_distances method and then apply the threshold
+        retrieved_data = self.retrieve_with_distances(query_text, n_results)
+        
+        filtered_chunks = []
+        for chunk, distance in retrieved_data:
+            if distance <= threshold:
+                filtered_chunks.append(chunk)
+            else:
+                logger.info(f"Filtered out chunk with distance {distance} (above threshold {threshold}).")
+        return filtered_chunks

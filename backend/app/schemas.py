@@ -20,3 +20,11 @@ class Source(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     sources: List[Source]
+
+# New models for debug endpoint
+class DebugRetrievalEntry(BaseModel):
+    chunk: DocumentChunk
+    distance: float
+
+class DebugRetrievalResponse(BaseModel):
+    results: List[DebugRetrievalEntry]

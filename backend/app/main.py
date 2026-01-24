@@ -1,5 +1,5 @@
 import logging
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.templating import Jinja2Templates
 from pydantic_settings import BaseSettings
 from typing import List
@@ -8,7 +8,7 @@ from .kb import load_knowledge_base
 from .vector_store import VectorStore
 from .retrieval import Retriever
 from .ollama_client import OllamaClient, OllamaError
-from .schemas import ChatRequest, ChatResponse, Source, DocumentChunk
+from .schemas import ChatRequest, ChatResponse, Source, DocumentChunk, DebugRetrievalEntry, DebugRetrievalResponse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -31,25 +31,22 @@ OLLAMA_CLIENT: OllamaClient = None
 
 def build_prompt(question: str, context_chunks: List[DocumentChunk]) -> str:
     if not context_chunks:
-        return f"I do not have any information in my knowledge base to answer: '{question}'."
+        return f"""You are a helpful FAQ chatbot. The user asked the following question: "{question}"
+        
+        No confident matches were found in the knowledge base to answer this question. Please state that you could not find a relevant answer in the knowledge base."""
 
     context = "\n\n---\n\n".join([chunk.text for chunk in context_chunks])
     
-    return f"""
-    SYSTEM: You are a strict FAQ bot. You must answer the question using ONLY the provided context.
-    RULES:
-    1. If the answer is NOT in the context, you MUST say "I don't know based on my files."
-    2. Do NOT use your own outside knowledge
-    3. If the context is irrelevant to the question, say "I don't know."
-
-    CONTEXT:
-    {context}
-
-    USER QUESTION: 
-    {question}
+    prompt = f"""
+    You are a helpful FAQ chatbot. Answer the user\'s question using ONLY the provided sources.
+    If the answer is not found in the sources, say "I don\'t know".
     
-    ANSWER:
+    Question: {question}
+    
+    Sources:
+    {context}
     """
+    return prompt
 
 @app.on_event("startup")
 def startup_event():
@@ -85,6 +82,20 @@ def health_check():
         "ollama_llm_model": settings.ollama_llm_model,
         "ollama_embed_model": settings.ollama_embed_model,
     }
+
+@app.get("/debug/retrieve", response_model=DebugRetrievalResponse)
+def debug_retrieve(query: str = Query(..., min_length=1)):
+    """
+    Debug endpoint to show raw retrieved chunks and their similarity scores.
+    """
+    logger.info(f"Debug retrieval for query: {query}")
+    raw_retrieval_data = RETRIEVER.retrieve_for_debug(query=query, top_k=settings.top_k)
+    
+    results = [
+        DebugRetrievalEntry(chunk=chunk, distance=distance)
+        for chunk, distance in raw_retrieval_data
+    ]
+    return DebugRetrievalResponse(results=results)
 
 @app.post("/chat", response_model=ChatResponse)
 def chat_handler(chat_request: ChatRequest):
